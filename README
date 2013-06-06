@@ -1,0 +1,14 @@
+SPACE ROGUE is a game where you fly a spaceship.
+
+It is a multiplayer game.  Each person plays a role in flying the ship.
+
+Your computer is your control of the ship.  It talks to an API for the role you
+are playing.  You send actions to the ship's master computer, and it sends you
+updates for your sensor displays.
+
+It really should feel like you're using a future computer, not playing a game.
+Including multiple applications and stuff might add to that.  Web browser?
+Chat room?  Silly little games (minesweeper?)
+
+The ship simulator should be hooked up to a "main screen", ideally a big TV
+that the whole bridge crew can see.
