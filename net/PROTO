@@ -1,0 +1,29 @@
+Super-bad internet connection:  (waterloo to china)  Maybe playable, but not primary goal.
+  0 packets transmitted, 48 packets received, 4.0% packet loss
+  round-trip min/avg/max/stddev = 70.694/346.603/1010.852/219.380 ms
+My internet: should work good enough most of the time with a small crew.
+  48 packets transmitted, 48 packets received, 0% packet loss
+  round-trip min/avg/max = 20.042/94.072/475.977 ms
+Better internet, intercity: Should work good.
+  50 packets transmitted, 50 received, 0% packet loss, time 49051ms
+  rtt min/avg/max/mdev = 31.981/32.020/32.079/0.227 ms
+My wifi:  Should play perfectly with large crew.
+  100 packets transmitted, 96 packets received, 4.0% packet loss
+  round-trip min/avg/max/stddev = 0.823/2.939/56.762/5.674 ms
+Gigabit lan: No excuses.
+  20 packets transmitted, 20 packets received, 0% packet loss
+  round-trip min/avg/max = 0.608/0.644/0.743 ms
+
+
+Protocol:
+
+Terminals register to be stations.
+
+They receive updates from the server when data changes.  That should happen
+approximately once per simulation tick, though shouldn't rely on that so the
+server can change simulation rates, implementations, etc.
+
+Terminals send commands to the server.  They can provide graphical
+representations of the fact that the command has been initiated, but shouldn't
+do too much simulation on their own -- we want the server to decide what the
+result of the action should be.
