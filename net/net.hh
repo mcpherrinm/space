@@ -76,4 +76,5 @@ public:
   Connection(const Address &server);
 
   bool send(const Message&);
+  void finish(); // terminate and join threads
 };

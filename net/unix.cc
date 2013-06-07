@@ -32,21 +32,6 @@ const char *Address::ip_str() {
 Connection::Connection(const Address &server_): server(server_) {
   sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
-  Message joinmsg;
-  joinmsg.data_len = sizeof(MessageHeader);
-  joinmsg.header = (MessageHeader*)malloc(joinmsg.data_len);
-  joinmsg.header->typetag = MessageType::JOIN_GAME;
-  joinmsg.header->messageid = 123;
-  joinmsg.resends = 0;
-  send_Q.push(joinmsg);
-
-  Message two;
-  two.data_len = sizeof(MessageHeader);
-  two.header = (MessageHeader*)malloc(two.data_len);
-  two.header->typetag = MessageType::JOIN_GAME;
-  two.header->messageid = 456;
-  two.resends = 0;
-  send_Q.push(two);
 
   send_thread = std::thread(&Connection::send_loop, this);
   recv_thread = std::thread(&Connection::recv_loop, this);
@@ -80,6 +65,7 @@ void Connection::recv_loop() {
                                 0,
                                 (struct sockaddr*)&from.sa, &fromlen);
 
+    // TODO sort out dispatching
     if(incoming.typetag == MessageType::ACK) {
       ack_msg(incoming.messageid);
     } else {
@@ -138,6 +124,10 @@ void Connection::send_loop() {
       send_Q.push(ackm);
     }
     if(send) {
+      if(m.header->typetag == MessageType::INVALID) {
+        printf("Tried to send invalid message\n");
+        return;
+      }
       ssize_t sent = sendto(sock,
                             m.header,
                             m.data_len,
@@ -156,8 +146,14 @@ void Connection::send_loop() {
 
 bool Connection::send(const Message& msg) {
   std::lock_guard<std::mutex> lk(send_Q_mutex);
+  msg.header->messageid = ++nextmessage;
   send_Q.push(msg);
   send_Q_cv.notify_one();
   return true;  // If I switch to a bounded Queue, return false on full
                 // or on dead connection
+}
+
+void Connection::finish() {
+  send_thread.join();
+  recv_thread.join();
 }
