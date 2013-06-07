@@ -1,5 +1,6 @@
 #pragma once
 //  Low-level network primitives
+#include <string.h>
 #include <stdint.h>
 #include <vector>
 #include <sys/socket.h>
@@ -11,13 +12,22 @@
 #include <condition_variable>
 
 class Address {
+private:
+  union {
+    char v4[INET_ADDRSTRLEN];
+    char v6[INET6_ADDRSTRLEN];
+  } namebuf;
+public:  // but not portable
+  union {
+    struct sockaddr sa;
+    struct sockaddr_in sa_in;
+    struct sockaddr_storage sa_storage;
+  };
 public:
-  struct sockaddr_in sa;
   Address(const char *, uint16_t port = 1255);
   Address(uint32_t, uint16_t port = 1255);
   Address(){};
-  // Not threadsafe, inet_ntop should be used instead
-  char *ip_str() { return inet_ntoa(sa.sin_addr); };
+  const char *ip_str();
 };
 
 enum class MessageType : uint16_t {

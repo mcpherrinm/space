@@ -1,13 +1,15 @@
-CFLAGS=-Wall -Wextra -std=c++11 -stdlib=libc++
+CFLAGS=-Wall -Wextra -std=c++11
 WERROR=-Wno-error=unused -Werror
 
+CXX=g++-4.8
+
 test: test.cc unix.o
-	clang++ test.cc -lpthread ${CFLAGS} unix.o -o test
+	${CXX} test.cc -lpthread ${CFLAGS} unix.o -o test
 unix.o: unix.cc net.hh
-	clang++ -c ${CFLAGS} -o unix.o unix.cc
+	${CXX} -c ${CFLAGS} -o unix.o unix.cc
 
 udp-server: udp-server.cc net.hh
-	clang++ ${CFLAGS} -o udp-server udp-server.cc
+	${CXX} ${CFLAGS} -o udp-server udp-server.cc
 
 listtest: listtest.cc
-	clang++ ${CFLAGS} -o listtest listtest.cc
+	${CXX} ${CFLAGS} -o listtest listtest.cc
