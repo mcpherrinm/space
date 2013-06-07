@@ -43,8 +43,10 @@ int main(void) {
            (int)message.typetag, message.messageid);
 
     message.typetag = MessageType::ACK; // MessageID number stays the same
-    sendto(sock, &message, sizeof( MessageHeader), 0, &from.sa, fromlen);
-    // Double reply to test ack code
-    sendto(sock, &message, sizeof( MessageHeader), 0, &from.sa, fromlen);
+    if(message.messageid != 123) { // test for dropping packets
+      sendto(sock, &message, sizeof( MessageHeader), 0, &from.sa, fromlen);
+      // Double reply to test ack code
+      sendto(sock, &message, sizeof( MessageHeader), 0, &from.sa, fromlen);
+    }
   }
 }

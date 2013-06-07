@@ -10,24 +10,24 @@ Address::Address(const char *ip, uint16_t port) {
   sa_in.sin_port = htons(port);
 }
 const char *Address::ip_str() {
-    switch(sa.sa_family) {
-        case AF_INET:
-            inet_ntop(AF_INET, &(((struct sockaddr_in *)&sa)->sin_addr),
-                    namebuf.v4, sizeof namebuf);
-            break;
+  switch(sa.sa_family) {
+      case AF_INET:
+          inet_ntop(AF_INET, &(((struct sockaddr_in *)&sa)->sin_addr),  // but not portable
+                  namebuf.v4, sizeof namebuf);
+          break;
 
-        case AF_INET6:
-            inet_ntop(AF_INET6, &(((struct sockaddr_in6 *)&sa)->sin6_addr),
-                    namebuf.v6, sizeof namebuf);
-            break;
+      case AF_INET6:
+          inet_ntop(AF_INET6, &(((struct sockaddr_in6 *)&sa)->sin6_addr),
+                  namebuf.v6, sizeof namebuf);
+          break;
 
-        default:
-            sprintf(namebuf.v6, "Unknown AF %d", sa.sa_family);
-            return namebuf.v4;
-    }
-
-    return namebuf.v4;
+      default:
+          sprintf(namebuf.v6, "Unknown AF %d", sa.sa_family);
+          return namebuf.v4;
   }
+
+  return namebuf.v4;
+}
 
 // Todo: figure out what the right handle to return
 // from this function is.
@@ -49,15 +49,36 @@ Connection::Connection(const Address &server_): server(server_) {
   joinmsg.header->messageid = 123;
   joinmsg.resends = 0;
   send_Q.push(joinmsg);
+
+  Message two;
+  two.data_len = sizeof(MessageHeader);
+  two.header = (MessageHeader*)malloc(two.data_len);
+  two.header->typetag = MessageType::JOIN_GAME;
+  two.header->messageid = 456;
+  two.resends = 0;
+  send_Q.push(two);
 }
 
+bool Connection::ack_msg(int id) {
+        printf("got an ack for %d\n", id);
+        std::lock_guard<std::mutex> lk(ack_Q_mutex);
+        for(auto i = ack_Q.begin(); i != ack_Q.end(); i++) {
+          if((*i).header->messageid == id) {
+            printf("acking existing packet!\n");
+            ack_Q.erase(i);
+            return true;
+          }
+        }
+        printf("Acking nonexistant packet\n");
+        return false;
+}
 
 // On the new thread, do a select() loop
 void Connection::recv_loop() {
   while(1) {
     union {
       char recvbuf[1500];
-      MessageHeader mh;
+      MessageHeader incoming;
     };
     Address from;
     socklen_t fromlen = sizeof from.sa;
@@ -66,22 +87,11 @@ void Connection::recv_loop() {
                                 0,
                                 (struct sockaddr*)&from.sa, &fromlen);
 
-    if(mh.typetag == MessageType::ACK) {
-      {
-        std::lock_guard<std::mutex> lk(ack_Q_mutex);
-        for(auto i = ack_Q.begin(); i != ack_Q.end(); i++) {
-          printf("Ack Q m has id %d\n", (*i).header->messageid);
-          if((*i).header->messageid == mh.messageid) {
-            printf("acking existing packet!\n");
-            //ack_Q.erase(i);
-            //ack_Q.erase(ack_Q.begin());
-            break;
-          }
-        }
-      }
+    if(incoming.typetag == MessageType::ACK) {
+      ack_msg(incoming.messageid);
     } else {
       printf("Got a message of size %ld from %s of type %d\n",
-        recvsize, from.ip_str(), (int)mh.typetag);
+        recvsize, from.ip_str(), (int)incoming.typetag);
     }
   }
 }
@@ -114,17 +124,20 @@ void Connection::send_loop() {
       }
 
       // check if any unacked packets need to be resent.
-      ackm = ack_Q.front();
-      auto now = std::chrono::steady_clock::now();
-      auto count = std::chrono::duration_cast<std::chrono::milliseconds>(now - ackm.time_in_Q).count();
-      if(count > 30) {
-        //ack_Q.erase(ack_Q.begin());
-        resend = true;
+      if(!ack_Q.empty()) {
+        ackm = ack_Q.front();
+        auto now = std::chrono::steady_clock::now();
+        auto count = std::chrono::duration_cast<std::chrono::milliseconds>(now - ackm.time_in_Q).count();
+        if(count > 30) {
+          ack_Q.erase(ack_Q.begin());
+          resend = true;
+        }
       }
     }
     if(resend) {
       ackm.resends += 1;
       if(ackm.resends > 10) {
+        printf("Stopping resending at 10\n");
         return;
       }
       std::lock_guard<std::mutex> lk(send_Q_mutex);

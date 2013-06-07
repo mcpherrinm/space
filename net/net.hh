@@ -64,7 +64,8 @@ class Connection {
   std::queue<Message> send_Q;
 
   std::mutex ack_Q_mutex;
-  std::vector<Message> ack_Q;
+  std::list<Message> ack_Q;
+  bool ack_msg(int);
 
   void send_loop();
   void recv_loop();

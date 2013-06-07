@@ -8,8 +8,8 @@ test: test.cc unix.o
 unix.o: unix.cc net.hh
 	${CXX} -c ${CFLAGS} -o unix.o unix.cc
 
-udp-server: udp-server.cc net.hh
-	${CXX} ${CFLAGS} -o udp-server udp-server.cc
+udp-server: udp-server.cc net.hh unix.o
+	${CXX} ${CFLAGS} -o udp-server udp-server.cc unix.o
 
 listtest: listtest.cc
 	${CXX} ${CFLAGS} -o listtest listtest.cc
