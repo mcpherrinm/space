@@ -57,7 +57,6 @@ class Connection {
   Address server;
   int sock;
   int nextmessage = 0;
-  Connection(const Address &server);
 
   std::mutex send_Q_mutex;
   std::condition_variable send_Q_cv;
@@ -70,8 +69,11 @@ class Connection {
   void send_loop();
   void recv_loop();
 
+  std::thread send_thread;
+  std::thread recv_thread;
+
 public:
-  static void run(const Address &server);
+  Connection(const Address &server);
 
   bool send(const Message&);
 };

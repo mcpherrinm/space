@@ -29,16 +29,6 @@ const char *Address::ip_str() {
   return namebuf.v4;
 }
 
-// Todo: figure out what the right handle to return
-// from this function is.
-void Connection::run(const Address &server) {
-  auto conn = new Connection(server);
-  std::thread send_thread(&Connection::send_loop, conn);
-  std::thread recv_thread(&Connection::recv_loop, conn);
-  send_thread.join(); // TODO, return these instead
-  recv_thread.join();
-}
-
 Connection::Connection(const Address &server_): server(server_) {
   sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
@@ -57,6 +47,9 @@ Connection::Connection(const Address &server_): server(server_) {
   two.header->messageid = 456;
   two.resends = 0;
   send_Q.push(two);
+
+  send_thread = std::thread(&Connection::send_loop, this);
+  recv_thread = std::thread(&Connection::recv_loop, this);
 }
 
 bool Connection::ack_msg(int id) {
@@ -106,6 +99,7 @@ void Connection::send_loop() {
         if(ack_Q.empty()) {
           send_Q_cv.wait(lk);
         } else {
+          // Maybe, more appropriately, wait until the next ack timeout.
           send_Q_cv.wait_for(lk, std::chrono::milliseconds(31));
         }
       }
@@ -137,7 +131,7 @@ void Connection::send_loop() {
     if(resend) {
       ackm.resends += 1;
       if(ackm.resends > 10) {
-        printf("Stopping resending at 10\n");
+        printf("Stopping resending at 10 -- need to handle this\n");
         return;
       }
       std::lock_guard<std::mutex> lk(send_Q_mutex);
