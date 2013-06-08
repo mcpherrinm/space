@@ -13,8 +13,8 @@ int main(void) {
   int sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
   struct sockaddr_in sa;
   union {
-    char buffer[1024];
-    MessageHeader message;
+    char buffer[2046];
+    Message message;
   };
   ssize_t recsize;
 
@@ -42,11 +42,11 @@ int main(void) {
            recsize, from.ip_str(),
            (int)message.typetag, message.messageid);
 
-    message.typetag = MessageType::ACK; // MessageID number stays the same
-    if(message.messageid != 123) { // test for dropping packets
-      sendto(sock, &message, sizeof( MessageHeader), 0, &from.sa, fromlen);
-      // Double reply to test ack code
-      sendto(sock, &message, sizeof( MessageHeader), 0, &from.sa, fromlen);
+    if(message.typetag == MessageType::DEBUG) {
+      //int afterlen = recsize - sizeof(Message);
+      printf("DEBUG: %s\n", ((char*)&message) + sizeof(Message));
     }
+    message.typetag = MessageType::ACK; // MessageID number stays the same
+    sendto(sock, &message, sizeof( Message ), 0, &from.sa, fromlen);
   }
 }

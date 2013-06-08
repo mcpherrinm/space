@@ -11,6 +11,8 @@
 #include <mutex>
 #include <condition_variable>
 
+#include "message.hh"
+
 class Address {
 private:
   union {
@@ -30,26 +32,14 @@ public:
   const char *ip_str();
 };
 
-enum class MessageType : uint16_t {
-  INVALID = 0,
-  JOIN_GAME, ADD_STATION, LEAVE_GAME, REMOVE_STATION,
-  ACK = 0xFFFF
-};
-
-// Header on network messages
-struct MessageHeader {
-  MessageType typetag;
-  uint16_t messageid;
-};
-
 // This is what lives in the various queues.
 // The header is followed by the message
 // so don't copy it off!
-struct Message {
+struct QueuedMessage {
   std::chrono::time_point<std::chrono::steady_clock> time_in_Q;
   int resends;
 
-  MessageHeader* header;
+  Message* data;
   ssize_t data_len; // includes size of header
 };
 
@@ -60,10 +50,10 @@ class Connection {
 
   std::mutex send_Q_mutex;
   std::condition_variable send_Q_cv;
-  std::queue<Message> send_Q;
+  std::queue<QueuedMessage> send_Q;
 
   std::mutex ack_Q_mutex;
-  std::list<Message> ack_Q;
+  std::list<QueuedMessage> ack_Q;
   bool ack_msg(int);
 
   void send_loop();
@@ -75,6 +65,6 @@ class Connection {
 public:
   Connection(const Address &server);
 
-  bool send(const Message&);
+  bool send(Message*, ssize_t len);
   void finish(); // terminate and join threads
 };

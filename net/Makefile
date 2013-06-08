@@ -11,5 +11,5 @@ unix.o: unix.cc net.hh
 udp-server: udp-server.cc net.hh unix.o
 	${CXX} ${CFLAGS} -o udp-server udp-server.cc unix.o
 
-listtest: listtest.cc
-	${CXX} ${CFLAGS} -o listtest listtest.cc
+struct: struct.cc
+	${CXX} ${CFLAGS} -o struct struct.cc

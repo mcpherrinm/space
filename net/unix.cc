@@ -35,20 +35,19 @@ Connection::Connection(const Address &server_): server(server_) {
 
   send_thread = std::thread(&Connection::send_loop, this);
   recv_thread = std::thread(&Connection::recv_loop, this);
+  send_thread.detach();
+  recv_thread.detach();
 }
 
 bool Connection::ack_msg(int id) {
-        printf("got an ack for %d\n", id);
-        std::lock_guard<std::mutex> lk(ack_Q_mutex);
-        for(auto i = ack_Q.begin(); i != ack_Q.end(); i++) {
-          if((*i).header->messageid == id) {
-            printf("acking existing packet!\n");
-            ack_Q.erase(i);
-            return true;
-          }
-        }
-        printf("Acking nonexistant packet\n");
-        return false;
+  std::lock_guard<std::mutex> lk(ack_Q_mutex);
+  for(auto i = ack_Q.begin(); i != ack_Q.end(); i++) {
+    if((*i).data->messageid == id) {
+      ack_Q.erase(i);
+      return true;
+    }
+  }
+  return false;
 }
 
 // On the new thread, do a select() loop
@@ -56,7 +55,7 @@ void Connection::recv_loop() {
   while(1) {
     union {
       char recvbuf[1500];
-      MessageHeader incoming;
+      Message incoming;
     };
     Address from;
     socklen_t fromlen = sizeof from.sa;
@@ -75,10 +74,11 @@ void Connection::recv_loop() {
   }
 }
 
+// This is pretty gross/bad.
 void Connection::send_loop() {
   while(1) {
     bool send = false;
-    Message m, ackm;
+    QueuedMessage m, ackm;
     {
       std::unique_lock<std::mutex> lk(send_Q_mutex);
       if(send_Q.empty()) {
@@ -124,12 +124,12 @@ void Connection::send_loop() {
       send_Q.push(ackm);
     }
     if(send) {
-      if(m.header->typetag == MessageType::INVALID) {
+      if(m.data->typetag == MessageType::INVALID) {
         printf("Tried to send invalid message\n");
         return;
       }
       ssize_t sent = sendto(sock,
-                            m.header,
+                            m.data,
                             m.data_len,
                             0, /*flags*/
                             (struct sockaddr*)&server.sa,
@@ -144,16 +144,14 @@ void Connection::send_loop() {
   }
 }
 
-bool Connection::send(const Message& msg) {
+bool Connection::send(Message *msg, ssize_t datalen) {
   std::lock_guard<std::mutex> lk(send_Q_mutex);
-  msg.header->messageid = ++nextmessage;
-  send_Q.push(msg);
+  QueuedMessage m;
+  m.data = msg;
+  m.data_len = datalen;
+  msg->messageid = ++nextmessage;
+  send_Q.push(m);
   send_Q_cv.notify_one();
   return true;  // If I switch to a bounded Queue, return false on full
                 // or on dead connection
-}
-
-void Connection::finish() {
-  send_thread.join();
-  recv_thread.join();
 }
