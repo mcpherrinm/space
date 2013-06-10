@@ -2,6 +2,7 @@ CFLAGS=-Wall -Wextra -std=c++11
 WERROR=-Wno-error=unused -Werror
 
 CXX=g++-4.8
+CXX=g++
 
 test: test.cc unix.o
 	${CXX} test.cc -lpthread ${CFLAGS} unix.o -o test

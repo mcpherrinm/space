@@ -12,11 +12,6 @@
 int main(void) {
   int sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
   struct sockaddr_in sa;
-  union {
-    char buffer[2046];
-    Message message;
-  };
-  ssize_t recsize;
 
   memset(&sa, 0, sizeof sa);
   sa.sin_family = AF_INET;
@@ -30,6 +25,11 @@ int main(void) {
   }
 
   for (;;) {
+    union {
+      char buffer[2046];
+      Message message;
+    };
+    ssize_t recsize;
     Address from;
     socklen_t fromlen = sizeof(from.sa_storage);
     recsize = recvfrom(sock,
