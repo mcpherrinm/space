@@ -6,13 +6,8 @@ int main(int argc, char **argv) {
   Address testserv(argc > 1 ? argv[1] : "127.0.0.1");
   Connection c(testserv);
 
-  Message *joinmsg = new Message;
-  joinmsg->typetag = MessageType::JOIN_GAME;
-  c.send(joinmsg, sizeof joinmsg);
-
-  Message *two = new Message;
-  two->typetag = MessageType::JOIN_GAME;
-  c.send(two, sizeof two);
+  JoinMessage *join = new JoinMessage("John");
+  c.send((Message*)join, sizeof join);
 
   union {
     char buf[256];

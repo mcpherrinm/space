@@ -37,14 +37,26 @@ int main(void) {
                        0,
                        &from.sa, &fromlen);
 
+    if(recsize < sizeof(Message)) {
+      printf("Got too small message, skipping\n");
+      break;
+    }
     printf("got message of size %zd from %s\n"
            "type: %d, id: %d\n",
            recsize, from.ip_str(),
            (int)message.typetag, message.messageid);
 
-    if(message.typetag == MessageType::DEBUG) {
-      //int afterlen = recsize - sizeof(Message);
+    switch(message.typetag) {
+     case MessageType::DEBUG:
       printf("DEBUG: %s\n", ((char*)&message) + sizeof(Message));
+      break;
+     case MessageType::JOIN_GAME:
+      printf("Join game by %s\n", ((JoinMessage*)&message)->username);
+      break;
+     case MessageType::INVALID:
+      printf("WHOA, BRO. Invalid!\n");
+     default:
+      break;
     }
     message.typetag = MessageType::ACK; // MessageID number stays the same
     sendto(sock, &message, sizeof( Message ), 0, &from.sa, fromlen);
